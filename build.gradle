@@ -1,0 +1,23 @@
+group 'butler'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+
+repositories {
+    mavenCentral()
+    jcenter()
+}
+
+ext {
+    jeromq = '0.3.5'
+    jackson = '2.7.4'
+    spring = '4.2.6.RELEASE'
+}
+
+dependencies {
+    compile "org.zeromq:jeromq:$jeromq"
+    compile "org.springframework:spring-core:$spring"
+    compile "org.springframework:spring-context:$spring"
+    compile "com.fasterxml.jackson.core:jackson-databind:$jackson"
+    testCompile "junit:junit:4.12"
+}
