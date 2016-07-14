@@ -20,8 +20,10 @@ public class Butler {
                     Socket socket = serverSocket.accept();
                     DatabaseSocketHandler databaseSocketHandler = new DatabaseSocketHandler(context, socket);
                     databaseSocketHandler.send();
-                    databaseSocketHandler.waitForReply();
-                    chatReceiverSocketHandler.addHandle(socket);
+                    String reply = databaseSocketHandler.waitForReply();
+                    if (reply != null) {
+                        chatReceiverSocketHandler.addHandle(socket);
+                    }
                 }
             }
         } catch (IOException e) {

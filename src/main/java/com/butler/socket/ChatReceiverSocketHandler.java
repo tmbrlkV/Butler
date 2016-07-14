@@ -14,7 +14,7 @@ public class ChatReceiverSocketHandler implements Runnable {
 
     public ChatReceiverSocketHandler(ZMQ.Context context) {
         receiver = context.socket(ZMQ.SUB);
-        receiver.connect("tcp://10.66.162.213:10000");
+        receiver.connect("tcp://10.66.160.204:10000");
         receiver.subscribe("".getBytes());
         poller = new ZMQ.Poller(0);
         poller.register(receiver, ZMQ.Poller.POLLIN);

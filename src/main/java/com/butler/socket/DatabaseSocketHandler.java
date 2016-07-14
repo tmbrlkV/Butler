@@ -14,7 +14,7 @@ public class DatabaseSocketHandler {
 
     public DatabaseSocketHandler(ZMQ.Context context, Socket nativeSocket) {
         requester = context.socket(ZMQ.REQ);
-        requester.connect("tcp://10.66.162.213:11000");
+        requester.connect("tcp://10.66.160.204:11000");
         try {
             scanner = new Scanner(nativeSocket.getInputStream());
             outputStream = new PrintWriter(nativeSocket.getOutputStream(), true);
@@ -27,8 +27,9 @@ public class DatabaseSocketHandler {
         requester.send(scanner.nextLine());
     }
 
-    public void waitForReply() {
+    public String waitForReply() {
         String reply = requester.recvStr();
         outputStream.println(reply);
+        return reply;
     }
 }

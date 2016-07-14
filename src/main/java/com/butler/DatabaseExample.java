@@ -10,7 +10,7 @@ import java.util.Scanner;
 
 public class DatabaseExample {
     public static void main(String[] args) {
-        try (Socket socket = new Socket("127.0.0.1", 8245)) {
+        try (Socket socket = new Socket("127.0.0.1", 8246)) {
             String command = "getUserByLoginPassword";
             String login = "kek";
             String password = "kek";
