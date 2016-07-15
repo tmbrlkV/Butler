@@ -19,7 +19,7 @@ public class Butler {
                 while (!Thread.currentThread().isInterrupted()) {
                     Socket socket = serverSocket.accept();
                     DatabaseSocketHandler databaseSocketHandler = new DatabaseSocketHandler(context, socket);
-                    databaseSocketHandler.send();
+//                    databaseSocketHandler.send();
                     String reply = databaseSocketHandler.waitForReply();
                     if (reply != null) {
                         chatReceiverSocketHandler.addHandle(socket);

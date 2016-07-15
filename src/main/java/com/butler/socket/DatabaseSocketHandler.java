@@ -17,29 +17,8 @@ public class DatabaseSocketHandler {
         inChannel = nativeSocket.getChannel();
     }
 
-    public void send() {
-        StringBuilder builder = new StringBuilder();
-        ByteBuffer buffer = ByteBuffer.allocate(1024);
-        try {
-            int bytesRead = 0;
-            while (bytesRead == 0) {
-                bytesRead = inChannel.read(buffer);
-            }
-
-            while (bytesRead > 0) {
-                buffer.flip();
-
-                while (buffer.hasRemaining()) {
-                    builder.append((char) buffer.get());
-                }
-
-                buffer.clear();
-                bytesRead = inChannel.read(buffer);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        requester.send(builder.toString());
+    public void send(String message) {
+        requester.send(message);
     }
 
     public String waitForReply() {
