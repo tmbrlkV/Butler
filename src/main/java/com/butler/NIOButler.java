@@ -5,7 +5,7 @@ import org.zeromq.ZMQ;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.Socket;
+import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
@@ -30,7 +30,6 @@ public class NIOButler implements AutoCloseable {
 
             butler.socketChannel.socket().bind(butler.address);
             butler.socketChannel.register(butler.selector, SelectionKey.OP_ACCEPT);
-
             while (!Thread.currentThread().isInterrupted()) {
                 butler.selector.select();
                 Iterator keyIterator = butler.selector.selectedKeys().iterator();
@@ -43,6 +42,8 @@ public class NIOButler implements AutoCloseable {
 
                     if (key.isAcceptable()) {
                         butler.accept(key);
+                    } else if (key.isWritable()) {
+                        butler.write(key);
                     }
                     keyIterator.remove();
                 }
@@ -52,15 +53,30 @@ public class NIOButler implements AutoCloseable {
         }
     }
 
+    private void write(SelectionKey key) throws IOException {
+        String reply = (String) key.attachment();
+        SocketChannel inChannel = (SocketChannel) key.channel();
+        try {
+            ByteBuffer wrap = ByteBuffer.wrap(reply.getBytes());
+            inChannel.write(wrap);
+            wrap.clear();
+            inChannel.register(selector, SelectionKey.OP_READ);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     private void accept(SelectionKey key) throws IOException {
         ServerSocketChannel serverSocketChannel = (ServerSocketChannel) key.channel();
         SocketChannel channel = serverSocketChannel.accept();
-        channel.configureBlocking(true);
+        channel.configureBlocking(false);
         DatabaseSocketHandler databaseSocketHandler = new DatabaseSocketHandler(context, channel.socket());
         databaseSocketHandler.send();
         String reply = databaseSocketHandler.waitForReply();
         System.out.println(reply);
+        channel.register(selector, SelectionKey.OP_WRITE, reply);
     }
+
 
     @Override
     public void close() throws Exception {

@@ -3,33 +3,46 @@ package com.butler.socket;
 import org.zeromq.ZMQ;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.net.Socket;
-import java.util.Scanner;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
 
 public class DatabaseSocketHandler {
     private ZMQ.Socket requester;
-    private Scanner scanner;
-    private PrintWriter outputStream;
+    private final SocketChannel inChannel;
 
     public DatabaseSocketHandler(ZMQ.Context context, Socket nativeSocket) {
         requester = context.socket(ZMQ.REQ);
         requester.connect("tcp://10.66.160.204:11000");
-        try {
-            scanner = new Scanner(nativeSocket.getInputStream());
-            outputStream = new PrintWriter(nativeSocket.getOutputStream(), true);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        inChannel = nativeSocket.getChannel();
     }
 
     public void send() {
-        requester.send(scanner.nextLine());
+        StringBuilder builder = new StringBuilder();
+        ByteBuffer buffer = ByteBuffer.allocate(1024);
+        try {
+            int bytesRead = 0;
+            while (bytesRead == 0) {
+                bytesRead = inChannel.read(buffer);
+            }
+
+            while (bytesRead > 0) {
+                buffer.flip();
+
+                while (buffer.hasRemaining()) {
+                    builder.append((char) buffer.get());
+                }
+
+                buffer.clear();
+                bytesRead = inChannel.read(buffer);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        requester.send(builder.toString());
     }
 
     public String waitForReply() {
-        String reply = requester.recvStr();
-        outputStream.println(reply);
-        return reply;
+        return requester.recvStr();
     }
 }

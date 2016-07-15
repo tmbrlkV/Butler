@@ -3,8 +3,9 @@ package com.butler.socket;
 import org.zeromq.ZMQ;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.net.Socket;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class ChatReceiverSocketHandler implements Runnable {
@@ -36,8 +37,10 @@ public class ChatReceiverSocketHandler implements Runnable {
                 String reply = receiver.recvStr();
                 sockets.parallelStream().forEach(socket -> {
                     try {
-                        PrintWriter printWriter = new PrintWriter(socket.getOutputStream(), true);
-                        printWriter.println(reply);
+//                        PrintWriter printWriter = new PrintWriter(socket.getOutputStream(), true);
+//                        printWriter.println(reply);
+                        SocketChannel channel = socket.getChannel();
+                        channel.write(ByteBuffer.wrap(reply.getBytes()));
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
