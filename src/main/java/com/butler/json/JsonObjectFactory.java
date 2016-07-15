@@ -3,10 +3,12 @@ package com.butler.json;
 import com.butler.entity.User;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.io.IOException;
 
 public final class JsonObjectFactory {
-    private JsonObjectFactory() {}
+    private JsonObjectFactory() {
+    }
 
     private static ObjectMapper mapper = new ObjectMapper();
 
