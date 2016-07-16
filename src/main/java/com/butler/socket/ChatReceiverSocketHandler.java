@@ -12,6 +12,7 @@ public class ChatReceiverSocketHandler implements Runnable {
     private ZMQ.Socket receiver;
     private ZMQ.Poller poller;
     private CopyOnWriteArrayList<Socket> sockets = new CopyOnWriteArrayList<>();
+    private static final int CUTOFF = 50;
 
     public ChatReceiverSocketHandler(ZMQ.Context context) {
         receiver = context.socket(ZMQ.SUB);
@@ -35,16 +36,25 @@ public class ChatReceiverSocketHandler implements Runnable {
             int events = poller.poll();
             if (events > 0) {
                 String reply = receiver.recvStr();
-                sockets.parallelStream().forEach(socket -> {
-                    try {
-//                        PrintWriter printWriter = new PrintWriter(socket.getOutputStream(), true);
-//                        printWriter.println(reply);
-                        SocketChannel channel = socket.getChannel();
-                        channel.write(ByteBuffer.wrap(reply.getBytes()));
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                });
+                if (sockets.size() > CUTOFF) {
+                    sockets.parallelStream().forEach(socket -> {
+                        try {
+                            SocketChannel channel = socket.getChannel();
+                            channel.write(ByteBuffer.wrap(reply.getBytes()));
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    });
+                } else {
+                    sockets.forEach(socket -> {
+                        try {
+                            SocketChannel channel = socket.getChannel();
+                            channel.write(ByteBuffer.wrap(reply.getBytes()));
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    });
+                }
             }
         }
     }
