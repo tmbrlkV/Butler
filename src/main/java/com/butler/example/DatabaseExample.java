@@ -1,4 +1,4 @@
-package com.butler;
+package com.butler.example;
 
 import com.butler.entity.User;
 import com.butler.json.JsonObjectFactory;
