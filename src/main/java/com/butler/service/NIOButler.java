@@ -1,4 +1,4 @@
-package com.butler;
+package com.butler.service;
 
 import com.butler.acceptor.DatabaseAcceptor;
 import com.butler.socket.ChatReceiverSocketHandler;
@@ -10,8 +10,12 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.*;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
 import java.util.Iterator;
+import java.util.concurrent.TimeUnit;
 
 public class NIOButler implements AutoCloseable {
     private Selector selector;
@@ -27,7 +31,7 @@ public class NIOButler implements AutoCloseable {
     }
 
     public static void main(String[] args) {
-        try (NIOButler butler = new NIOButler("127.0.0.1", 8246)) {
+        try (NIOButler butler = new NIOButler("10.66.160.180", 8246)) {
             butler.init();
             new Thread(butler.chatReceiverSocketHandler).start();
 
@@ -81,11 +85,15 @@ public class NIOButler implements AutoCloseable {
 
         String message = new String(buffer.array());
 
-        chatSenderSocketHandler.send(message);
-        databaseAcceptor = new DatabaseAcceptor(key, context);
-        String databaseReply = databaseAcceptor.chainToDatabase(message);
-        key.channel().register(selector, SelectionKey.OP_WRITE, databaseReply);
-
+        String attachment = (String) key.attachment();
+        if (attachment == null) {
+            chatSenderSocketHandler.send(message.trim());
+        } else {
+            databaseAcceptor = new DatabaseAcceptor(key, context);
+            String databaseReply = databaseAcceptor.chainToDatabase(message);
+            key.attach(null);
+            key.channel().register(selector, SelectionKey.OP_WRITE, databaseReply);
+        }
     }
 
     private void write(SelectionKey key) throws IOException {
@@ -99,7 +107,7 @@ public class NIOButler implements AutoCloseable {
         SocketChannel channel = serverSocketChannel.accept();
         channel.configureBlocking(false);
         chatReceiverSocketHandler.addHandle(channel.socket());
-        channel.register(selector, SelectionKey.OP_READ);
+        channel.register(selector, SelectionKey.OP_READ, "accept");
     }
 
     private void dropClient(SelectionKey key) {

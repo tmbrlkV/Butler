@@ -1,4 +1,4 @@
-package com.butler;
+package com.butler.example;
 
 import java.io.IOException;
 import java.io.PrintWriter;

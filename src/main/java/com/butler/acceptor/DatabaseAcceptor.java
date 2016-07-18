@@ -19,8 +19,6 @@ public class DatabaseAcceptor {
     }
 
     public String chainToDatabase(String message) throws IOException {
-
-
         DatabaseSocketHandler socketHandler = new DatabaseSocketHandler(context);
         return socketHandler.communicate(message);
     }
