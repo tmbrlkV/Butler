@@ -1,8 +1,11 @@
 package com.butler.service;
 
 import com.butler.acceptor.DatabaseAcceptor;
+import com.butler.json.JsonObject;
+import com.butler.json.JsonObjectFactory;
 import com.butler.socket.ChatReceiverSocketHandler;
 import com.butler.socket.ChatSenderSocketHandler;
+import com.butler.socket.TimeoutManager;
 import org.zeromq.ZMQ;
 
 import java.io.IOException;
@@ -14,8 +17,8 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.time.Instant;
 import java.util.Iterator;
-import java.util.concurrent.TimeUnit;
 
 public class NIOButler implements AutoCloseable {
     private Selector selector;
@@ -25,13 +28,14 @@ public class NIOButler implements AutoCloseable {
     private ChatReceiverSocketHandler chatReceiverSocketHandler;
     private DatabaseAcceptor databaseAcceptor;
     private ChatSenderSocketHandler chatSenderSocketHandler;
+    private TimeoutManager timeoutManager;
 
     private NIOButler(String address, int port) {
         this.address = new InetSocketAddress(address, port);
     }
 
     public static void main(String[] args) {
-        try (NIOButler butler = new NIOButler("10.66.160.180", 8246)) {
+        try (NIOButler butler = new NIOButler("10.66.160.180", 13000)) {
             butler.init();
             new Thread(butler.chatReceiverSocketHandler).start();
 
@@ -72,6 +76,9 @@ public class NIOButler implements AutoCloseable {
         socketChannel.register(selector, SelectionKey.OP_ACCEPT);
         chatReceiverSocketHandler = new ChatReceiverSocketHandler(context);
         chatSenderSocketHandler = new ChatSenderSocketHandler(context);
+
+        timeoutManager = new TimeoutManager();
+        new Thread(timeoutManager).start();
     }
 
     private void read(SelectionKey key) throws IOException {
@@ -83,11 +90,11 @@ public class NIOButler implements AutoCloseable {
             throw new IOException("connection is closed");
         }
 
-        String message = new String(buffer.array());
+        String message = new String(buffer.array()).trim();
 
-        String attachment = (String) key.attachment();
-        if (attachment == null) {
-            chatSenderSocketHandler.send(message.trim());
+        if (JsonObjectFactory.getObjectFromJson(message, JsonObject.class) == null) {
+            chatSenderSocketHandler.send(message);
+            timeoutManager.addHandle(channel.socket(), Instant.now());
         } else {
             databaseAcceptor = new DatabaseAcceptor(key, context);
             String databaseReply = databaseAcceptor.chainToDatabase(message);
@@ -107,7 +114,8 @@ public class NIOButler implements AutoCloseable {
         SocketChannel channel = serverSocketChannel.accept();
         channel.configureBlocking(false);
         chatReceiverSocketHandler.addHandle(channel.socket());
-        channel.register(selector, SelectionKey.OP_READ, "accept");
+        timeoutManager.addHandle(channel.socket(), Instant.now());
+        channel.register(selector, SelectionKey.OP_READ);
     }
 
     private void dropClient(SelectionKey key) {
@@ -118,6 +126,7 @@ public class NIOButler implements AutoCloseable {
             System.out.println("Connection closed by client: " + remoteAddress);
             clientChannel.close();
             chatReceiverSocketHandler.removeHandle(socket);
+            timeoutManager.removeHandle(socket);
             key.cancel();
         } catch (IOException e) {
             e.printStackTrace();
