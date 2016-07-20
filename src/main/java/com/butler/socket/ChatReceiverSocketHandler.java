@@ -7,6 +7,7 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Consumer;
 
 public class ChatReceiverSocketHandler implements Runnable {
     private ZMQ.Socket receiver;
@@ -36,24 +37,18 @@ public class ChatReceiverSocketHandler implements Runnable {
             int events = poller.poll();
             if (events > 0) {
                 String reply = receiver.recvStr();
+                Consumer<Socket> handler = socket -> {
+                    try {
+                        SocketChannel channel = socket.getChannel();
+                        channel.write(ByteBuffer.wrap(reply.getBytes()));
+                    } catch (IOException e) {
+                        removeHandle(socket);
+                    }
+                };
                 if (sockets.size() > CUTOFF) {
-                    sockets.parallelStream().forEach(socket -> {
-                        try {
-                            SocketChannel channel = socket.getChannel();
-                            channel.write(ByteBuffer.wrap(reply.getBytes()));
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    });
+                    sockets.parallelStream().forEach(handler);
                 } else {
-                    sockets.forEach(socket -> {
-                        try {
-                            SocketChannel channel = socket.getChannel();
-                            channel.write(ByteBuffer.wrap(reply.getBytes()));
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    });
+                    sockets.forEach(handler);
                 }
             }
         }
