@@ -19,6 +19,7 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.time.Instant;
 import java.util.Iterator;
+import java.util.Properties;
 
 public class NIOButler implements AutoCloseable {
     private Selector selector;
@@ -35,7 +36,11 @@ public class NIOButler implements AutoCloseable {
     }
 
     public static void main(String[] args) {
-        try (NIOButler butler = new NIOButler("10.66.160.180", 13000)) {
+        Properties properties = ConnectionProperties.getProperties();
+        String address = properties.getProperty("butler_address");
+        int port = Integer.parseInt(properties.getProperty("butler_port"));
+
+        try (NIOButler butler = new NIOButler(address, port)) {
             butler.init();
             new Thread(butler.chatReceiverSocketHandler).start();
 
@@ -114,7 +119,6 @@ public class NIOButler implements AutoCloseable {
         SocketChannel channel = serverSocketChannel.accept();
         channel.configureBlocking(false);
         chatReceiverSocketHandler.addHandle(channel.socket());
-        timeoutManager.addHandle(channel.socket(), Instant.now());
         channel.register(selector, SelectionKey.OP_READ);
     }
 

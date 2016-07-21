@@ -1,11 +1,13 @@
 package com.butler.socket;
 
+import com.butler.service.ConnectionProperties;
 import org.zeromq.ZMQ;
 
 import java.io.IOException;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.util.Properties;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
@@ -16,8 +18,11 @@ public class ChatReceiverSocketHandler implements Runnable {
     private static final int CUTOFF = 50;
 
     public ChatReceiverSocketHandler(ZMQ.Context context) {
+        Properties properties = ConnectionProperties.getProperties();
+        String chatAddress = properties.getProperty("chat_receiver_address");
+
         receiver = context.socket(ZMQ.SUB);
-        receiver.connect("tcp://10.66.160.204:10000");
+        receiver.connect(chatAddress);
         receiver.subscribe("".getBytes());
         poller = new ZMQ.Poller(0);
         poller.register(receiver, ZMQ.Poller.POLLIN);

@@ -1,22 +1,34 @@
 package com.butler.socket;
 
+import com.butler.service.ConnectionProperties;
+
 import java.io.IOException;
 import java.net.Socket;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 public class TimeoutManager implements Runnable {
     private Map<Socket, Instant> sockets = new ConcurrentHashMap<>();
-    private static long timeout = 10;
+    private final int threshold;
+    private final int threadCheckDelay;
+    private static long timeout;
+
+    public TimeoutManager() {
+        Properties properties = ConnectionProperties.getProperties();
+        threshold = Integer.parseInt(properties.getProperty("connections_threshold"));
+        threadCheckDelay = Integer.parseInt(properties.getProperty("thread_check_delay_ms"));
+        timeout = Long.parseLong(properties.getProperty("timeout_s"));
+    }
 
     @Override
     public void run() {
         while (!Thread.currentThread().isInterrupted()) {
             try {
-                Thread.sleep(10_000);
+                Thread.sleep(threadCheckDelay);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -33,7 +45,7 @@ public class TimeoutManager implements Runnable {
                     }
                 }
             };
-            if (sockets.size() > 50) {
+            if (sockets.size() > threshold) {
                 sockets.keySet().parallelStream().forEach(handler);
             } else {
                 sockets.keySet().forEach(handler);
@@ -42,11 +54,20 @@ public class TimeoutManager implements Runnable {
     }
 
     public void addHandle(Socket socket, Instant instant) {
+        System.out.println("Added " + socket);
         sockets.put(socket, instant);
+        System.out.println(sockets.size());
     }
 
     public void removeHandle(Socket socket) {
+        System.out.println("Removed " + socket);
         sockets.remove(socket);
+        System.out.println(sockets.size());
+        try {
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 }

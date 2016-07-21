@@ -2,14 +2,20 @@ package com.butler.socket;
 
 import com.butler.json.JsonObject;
 import com.butler.json.JsonObjectFactory;
+import com.butler.service.ConnectionProperties;
 import org.zeromq.ZMQ;
+
+import java.util.Properties;
 
 public class DatabaseSocketHandler {
     private ZMQ.Socket requester;
 
     public DatabaseSocketHandler(ZMQ.Context context) {
+        Properties properties = ConnectionProperties.getProperties();
+        String databaseAddress = properties.getProperty("database_address");
+
         requester = context.socket(ZMQ.REQ);
-        requester.connect("tcp://10.66.160.204:11000");
+        requester.connect(databaseAddress);
     }
 
     public String communicate(String request) {
