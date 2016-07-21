@@ -114,7 +114,6 @@ public class NIOButler implements AutoCloseable {
         SocketChannel channel = serverSocketChannel.accept();
         channel.configureBlocking(false);
         chatReceiverSocketHandler.addHandle(channel.socket());
-        timeoutManager.addHandle(channel.socket(), Instant.now());
         channel.register(selector, SelectionKey.OP_READ);
     }
 
