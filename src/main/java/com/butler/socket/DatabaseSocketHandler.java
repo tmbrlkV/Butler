@@ -1,8 +1,8 @@
 package com.butler.socket;
 
+import com.butler.service.ConnectionProperties;
 import com.butler.util.json.JsonObject;
 import com.butler.util.json.JsonObjectFactory;
-import com.butler.service.ConnectionProperties;
 import org.zeromq.ZMQ;
 
 import java.util.Properties;
@@ -31,6 +31,8 @@ public class DatabaseSocketHandler {
     }
 
     private String waitForReply() {
-        return requester.recvStr();
+        String response = requester.recvStr();
+        requester.close();
+        return response;
     }
 }
