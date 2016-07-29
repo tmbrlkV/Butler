@@ -1,7 +1,7 @@
 package com.butler.socket;
 
-import com.butler.json.JsonObject;
-import com.butler.json.JsonObjectFactory;
+import com.butler.util.json.JsonObject;
+import com.butler.util.json.JsonObjectFactory;
 import com.butler.service.ConnectionProperties;
 import org.zeromq.ZMQ;
 

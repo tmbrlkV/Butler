@@ -1,8 +1,8 @@
 package com.butler.service;
 
 import com.butler.acceptor.DatabaseAcceptor;
-import com.butler.json.JsonObject;
-import com.butler.json.JsonObjectFactory;
+import com.butler.util.json.JsonObject;
+import com.butler.util.json.JsonObjectFactory;
 import com.butler.socket.ChatReceiverSocketHandler;
 import com.butler.socket.ChatSenderSocketHandler;
 import com.butler.socket.TimeoutManager;

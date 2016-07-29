@@ -21,7 +21,7 @@ public class TimeoutManager implements Runnable {
         Properties properties = ConnectionProperties.getProperties();
         threshold = Integer.parseInt(properties.getProperty("connections_threshold"));
         threadCheckDelay = Integer.parseInt(properties.getProperty("thread_check_delay_ms"));
-        timeout = Long.parseLong(properties.getProperty("timeout_s"));
+        timeout = Long.parseLong(properties.getProperty("timeout_sec"));
     }
 
     @Override

@@ -15,11 +15,12 @@ public class ChatReceiverSocketHandler implements Runnable {
     private ZMQ.Socket receiver;
     private ZMQ.Poller poller;
     private CopyOnWriteArrayList<Socket> sockets = new CopyOnWriteArrayList<>();
-    private static final int CUTOFF = 50;
+    private static int CUTOFF;
 
     public ChatReceiverSocketHandler(ZMQ.Context context) {
         Properties properties = ConnectionProperties.getProperties();
         String chatAddress = properties.getProperty("chat_receiver_address");
+        CUTOFF = Integer.parseInt(properties.getProperty("connections_threshold"));
 
         receiver = context.socket(ZMQ.SUB);
         receiver.connect(chatAddress);

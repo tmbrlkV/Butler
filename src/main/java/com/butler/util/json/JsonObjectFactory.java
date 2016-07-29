@@ -1,6 +1,6 @@
-package com.butler.json;
+package com.butler.util.json;
 
-import com.butler.entity.User;
+import com.butler.util.entity.User;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 

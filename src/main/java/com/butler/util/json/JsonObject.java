@@ -1,6 +1,6 @@
-package com.butler.json;
+package com.butler.util.json;
 
-import com.butler.entity.User;
+import com.butler.util.entity.User;
 
 public class JsonObject {
     private String command;
