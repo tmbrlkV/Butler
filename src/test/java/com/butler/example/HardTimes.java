@@ -16,12 +16,12 @@ public class HardTimes {
     public static void main(String[] args) throws Exception {
         Map<SocketChannel, User> socketUserMap = new ConcurrentHashMap<>();
         AtomicInteger integer = new AtomicInteger(0);
-        for (int i = 0; i < 2050; ++i) {
+        for (int i = 0; i < 10000; ++i) {
             CompletableFuture.supplyAsync(() -> {
                 SocketChannel channel = null;
                 try {
                     System.out.println(integer.incrementAndGet());
-                    channel = SocketChannel.open(new InetSocketAddress("10.66.162.165", 13000));
+                    channel = SocketChannel.open(new InetSocketAddress("192.168.1.41", 13000));
                     socketUserMap.put(channel, new User());
                     System.out.println(channel);
                     StringBuilder builder = new StringBuilder();
@@ -72,6 +72,11 @@ public class HardTimes {
                 if (activeSocket != null) {
                     System.out.println(socketUserMap.get(activeSocket));
                     try {
+                        String message = activeSocket.getLocalAddress() + ": " + "kek\n";
+                        for (int j = 0; j < 10; ++j) {
+                            ByteBuffer wrap = ByteBuffer.wrap(message.getBytes());
+                            activeSocket.write(wrap);
+                        }
                         activeSocket.close();
                     } catch (IOException e) {
                         e.printStackTrace();

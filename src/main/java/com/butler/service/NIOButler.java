@@ -1,11 +1,12 @@
 package com.butler.service;
 
 import com.butler.acceptor.DatabaseAcceptor;
-import com.butler.util.json.JsonObject;
-import com.butler.util.json.JsonObjectFactory;
 import com.butler.socket.ChatReceiverSocketHandler;
 import com.butler.socket.ChatSenderSocketHandler;
 import com.butler.socket.TimeoutManager;
+import com.butler.util.json.JsonMessage;
+import com.butler.util.json.JsonObject;
+import com.butler.util.json.JsonObjectFactory;
 import org.zeromq.ZMQ;
 
 import java.io.IOException;
@@ -96,8 +97,7 @@ public class NIOButler implements AutoCloseable {
         }
 
         String message = new String(buffer.array()).trim();
-
-        if (JsonObjectFactory.getObjectFromJson(message, JsonObject.class) == null) {
+        if (JsonObjectFactory.getObjectFromJson(message, JsonMessage.class) != null) {
             chatSenderSocketHandler.send(message);
             timeoutManager.addHandle(channel.socket(), Instant.now());
         } else {

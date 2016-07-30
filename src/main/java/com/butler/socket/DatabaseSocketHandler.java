@@ -19,6 +19,7 @@ public class DatabaseSocketHandler {
     }
 
     public String communicate(String request) {
+        request = request.replace("object", "user");
         if (isValid(request)) {
             requester.send(request);
             return waitForReply();
