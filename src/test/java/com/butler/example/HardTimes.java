@@ -25,7 +25,7 @@ public class HardTimes {
                     socketUserMap.put(channel, new User());
                     System.out.println(channel);
                     writeUserToDatabase(channel);
-                    User user = getUserFromDatabase(channel);
+                    User user = getUserFromDatabase(channel, 0);
                     assert user != null;
                     if (user.validation()) {
                         socketUserMap.put(channel, user);
@@ -42,7 +42,7 @@ public class HardTimes {
         }
     }
 
-    private static User getUserFromDatabase(SocketChannel channel) throws IOException {
+    private static User getUserFromDatabase(SocketChannel channel, int k) throws IOException {
         ByteBuffer buffer = ByteBuffer.allocate(1024);
         channel.read(buffer);
         String userJson = new String(buffer.array()).trim();
@@ -51,8 +51,10 @@ public class HardTimes {
         User user = JsonObjectFactory.getObjectFromJson(userJson, User.class);
         if (user != null) {
             return user;
+        } else if (k < 2) {
+            return getUserFromDatabase(channel, k + 1);
         } else {
-            return getUserFromDatabase(channel);
+            return new User();
         }
     }
 
@@ -71,7 +73,7 @@ public class HardTimes {
         try {
             String auth = JsonObjectFactory.getJsonString("getUserByLoginPassword", user);
             activeChannel.write(ByteBuffer.wrap(auth.getBytes()));
-            User userExpected = getUserFromDatabase(activeChannel);
+            User userExpected = getUserFromDatabase(activeChannel, 0);
             if (user.equals(userExpected)) {
                 return activeChannel;
             }
