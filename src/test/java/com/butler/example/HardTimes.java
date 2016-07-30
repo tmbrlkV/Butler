@@ -21,7 +21,7 @@ public class HardTimes {
                 SocketChannel channel = null;
                 try {
                     System.out.println(integer.incrementAndGet());
-                    channel = SocketChannel.open(new InetSocketAddress("192.168.1.41", 13000));
+                    channel = SocketChannel.open(new InetSocketAddress("192.168.1.36", 13000));
                     socketUserMap.put(channel, new User());
                     System.out.println(channel);
                     StringBuilder builder = new StringBuilder();
@@ -73,10 +73,10 @@ public class HardTimes {
                     System.out.println(socketUserMap.get(activeSocket));
                     try {
                         String message = activeSocket.getLocalAddress() + ": " + "kek\n";
-                        for (int j = 0; j < 10; ++j) {
-                            ByteBuffer wrap = ByteBuffer.wrap(message.getBytes());
-                            activeSocket.write(wrap);
-                        }
+//                        for (int j = 0; j < 10; ++j) {
+                        ByteBuffer wrap = ByteBuffer.wrap(message.getBytes());
+                        activeSocket.write(wrap);
+//                        }
                         activeSocket.close();
                     } catch (IOException e) {
                         e.printStackTrace();

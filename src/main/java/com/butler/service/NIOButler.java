@@ -1,10 +1,10 @@
 package com.butler.service;
 
 import com.butler.acceptor.DatabaseAcceptor;
+import com.butler.service.command.CommandManager;
 import com.butler.socket.ChatReceiverSocketHandler;
 import com.butler.socket.ChatSenderSocketHandler;
 import com.butler.socket.TimeoutManager;
-import com.butler.util.json.JsonMessage;
 import com.butler.util.json.JsonObject;
 import com.butler.util.json.JsonObjectFactory;
 import org.zeromq.ZMQ;
@@ -18,22 +18,30 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.time.Instant;
 import java.util.Iterator;
 import java.util.Properties;
 
 public class NIOButler implements AutoCloseable {
     private Selector selector;
-    private InetSocketAddress address;
     private ServerSocketChannel socketChannel;
     private ZMQ.Context context = ZMQ.context(1);
     private ChatReceiverSocketHandler chatReceiverSocketHandler;
     private DatabaseAcceptor databaseAcceptor;
-    private ChatSenderSocketHandler chatSenderSocketHandler;
     private TimeoutManager timeoutManager;
+    private CommandManager commandManager;
 
     private NIOButler(String address, int port) {
-        this.address = new InetSocketAddress(address, port);
+        try {
+            InetSocketAddress connectionAddress = new InetSocketAddress(address, port);
+            selector = Selector.open();
+            socketChannel = ServerSocketChannel.open();
+            socketChannel.configureBlocking(false);
+
+            socketChannel.socket().bind(connectionAddress);
+            socketChannel.register(selector, SelectionKey.OP_ACCEPT);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public static void main(String[] args) {
@@ -74,17 +82,20 @@ public class NIOButler implements AutoCloseable {
     }
 
     private void init() throws IOException {
-        selector = Selector.open();
-        socketChannel = ServerSocketChannel.open();
-        socketChannel.configureBlocking(false);
-
-        socketChannel.socket().bind(address);
-        socketChannel.register(selector, SelectionKey.OP_ACCEPT);
         chatReceiverSocketHandler = new ChatReceiverSocketHandler(context);
-        chatSenderSocketHandler = new ChatSenderSocketHandler(context);
+        ChatSenderSocketHandler chatSenderSocketHandler = new ChatSenderSocketHandler(context);
 
         timeoutManager = new TimeoutManager();
         new Thread(timeoutManager).start();
+        commandManager = new CommandManager(chatSenderSocketHandler, timeoutManager);
+    }
+
+    private void accept(SelectionKey key) throws IOException {
+        ServerSocketChannel serverSocketChannel = (ServerSocketChannel) key.channel();
+        SocketChannel channel = serverSocketChannel.accept();
+        channel.configureBlocking(false);
+        chatReceiverSocketHandler.addHandle(channel.socket());
+        channel.register(selector, SelectionKey.OP_READ);
     }
 
     private void read(SelectionKey key) throws IOException {
@@ -97,14 +108,13 @@ public class NIOButler implements AutoCloseable {
         }
 
         String message = new String(buffer.array()).trim();
-        if (JsonObjectFactory.getObjectFromJson(message, JsonMessage.class) != null) {
-            chatSenderSocketHandler.send(message);
-            timeoutManager.addHandle(channel.socket(), Instant.now());
-        } else {
+        if (JsonObjectFactory.getObjectFromJson(message, JsonObject.class) != null) {
             databaseAcceptor = new DatabaseAcceptor(key, context);
             String databaseReply = databaseAcceptor.chainToDatabase(message);
             key.attach(null);
             key.channel().register(selector, SelectionKey.OP_WRITE, databaseReply);
+        } else {
+            commandManager.execute(message, key);
         }
     }
 
@@ -112,14 +122,6 @@ public class NIOButler implements AutoCloseable {
         String databaseReply = (String) key.attachment();
         databaseAcceptor.chainFromDatabase(databaseReply);
         key.channel().register(selector, SelectionKey.OP_READ);
-    }
-
-    private void accept(SelectionKey key) throws IOException {
-        ServerSocketChannel serverSocketChannel = (ServerSocketChannel) key.channel();
-        SocketChannel channel = serverSocketChannel.accept();
-        channel.configureBlocking(false);
-        chatReceiverSocketHandler.addHandle(channel.socket());
-        channel.register(selector, SelectionKey.OP_READ);
     }
 
     private void dropClient(SelectionKey key) {
