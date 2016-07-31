@@ -25,7 +25,7 @@ public class HardTimes {
                     socketUserMap.put(channel, new User());
                     System.out.println(channel);
                     writeUserToDatabase(channel);
-                    User user = getUserFromDatabase(channel, 0);
+                    User user = getUserFromDatabase(channel);
                     assert user != null;
                     if (user.validation()) {
                         socketUserMap.put(channel, user);
@@ -38,11 +38,11 @@ public class HardTimes {
                 socketUserMap.remove(channel);
                 return channel;
             }).thenApply(activeChannel -> authorization(socketUserMap, activeChannel))
-                    .thenAcceptAsync(socketChannel -> closeChannel(socketUserMap, socketChannel)).join();
+                    .thenAcceptAsync(socketChannel -> writeToChat(socketUserMap, socketChannel)).join();
         }
     }
 
-    private static User getUserFromDatabase(SocketChannel channel, int k) throws IOException {
+    private static User getUserFromDatabase(SocketChannel channel) throws IOException {
         ByteBuffer buffer = ByteBuffer.allocate(1024);
         channel.read(buffer);
         String userJson = new String(buffer.array()).trim();
@@ -51,8 +51,6 @@ public class HardTimes {
         User user = JsonObjectFactory.getObjectFromJson(userJson, User.class);
         if (user != null) {
             return user;
-        } else if (k < 2) {
-            return getUserFromDatabase(channel, k + 1);
         } else {
             return new User();
         }
@@ -73,8 +71,8 @@ public class HardTimes {
         try {
             String auth = JsonObjectFactory.getJsonString("getUserByLoginPassword", user);
             activeChannel.write(ByteBuffer.wrap(auth.getBytes()));
-            User userExpected = getUserFromDatabase(activeChannel, 0);
-            if (user.equals(userExpected)) {
+            User userExpected = getUserFromDatabase(activeChannel);
+            if (userExpected != null && user != null && user.equals(userExpected)) {
                 return activeChannel;
             }
         } catch (Exception e) {
@@ -83,7 +81,7 @@ public class HardTimes {
         return null;
     }
 
-    private static void closeChannel(Map<SocketChannel, User> socketUserMap, SocketChannel socketChannel) {
+    private static void writeToChat(Map<SocketChannel, User> socketUserMap, SocketChannel socketChannel) {
         if (socketChannel != null) {
             System.out.println(socketUserMap.get(socketChannel));
             try {
@@ -91,7 +89,6 @@ public class HardTimes {
                         socketChannel.getLocalAddress().toString(), "kek");
                 String jsonString = JsonObjectFactory.getJsonString(message);
                 socketChannel.write(ByteBuffer.wrap(jsonString.getBytes()));
-                socketChannel.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
