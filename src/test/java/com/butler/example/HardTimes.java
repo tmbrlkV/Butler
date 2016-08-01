@@ -8,37 +8,43 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class HardTimes {
-    public static void main(String[] args) throws Exception {
-        Map<SocketChannel, User> socketUserMap = new HashMap<>();
-        final int[] counter = {0};
-        for (int i = 0; i < 100_000; ++i) {
-            CompletableFuture.supplyAsync(() -> {
-                SocketChannel channel = null;
-                try {
-                    System.out.println(++counter[0]);
-                    channel = SocketChannel.open(new InetSocketAddress("192.168.1.36", 13000));
-                    socketUserMap.put(channel, new User());
-                    System.out.println(channel);
-                    writeUserToDatabase(channel);
-                    User user = getUserFromDatabase(channel);
-                    assert user != null;
-                    if (user.validation()) {
-                        socketUserMap.put(channel, user);
-                        return channel;
-                    }
 
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                socketUserMap.remove(channel);
-                return channel;
-            }).thenApply(activeChannel -> authorization(socketUserMap, activeChannel))
-                    .thenAcceptAsync(socketChannel -> writeToChat(socketUserMap, socketChannel)).join();
+    private static int[] counter;
+
+    public static void main(String[] args) throws Exception {
+        Map<SocketChannel, User> socketUserMap = new ConcurrentHashMap<>();
+        counter = new int[]{0};
+        for (int i = 0; i < 100_000; ++i) {
+            try (SocketChannel channel = SocketChannel.open(new InetSocketAddress("10.66.160.89", 13000))) {
+
+                CompletableFuture.supplyAsync(() -> {
+                    try {
+                        System.out.println(++counter[0]);
+
+                        socketUserMap.put(channel, new User());
+                        System.out.println(channel);
+                        writeUserToDatabase(channel);
+                        User user = getUserFromDatabase(channel);
+                        assert user != null;
+                        if (user.validation()) {
+                            socketUserMap.put(channel, user);
+                            return channel;
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    socketUserMap.remove(channel);
+                    return null;
+                }).thenApply(activeChannel -> authorization(socketUserMap, activeChannel))
+                        .thenAcceptAsync(socketChannel -> writeToChat(socketUserMap, socketChannel)).join();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -51,32 +57,32 @@ public class HardTimes {
         User user = JsonObjectFactory.getObjectFromJson(userJson, User.class);
         if (user != null) {
             return user;
-        } else {
-            return new User();
         }
+        return new User();
     }
 
     private static void writeUserToDatabase(SocketChannel channel) throws IOException {
         StringBuilder builder = new StringBuilder();
         builder.append("{\"command\":\"newUser\",\"user\":{\"password\":\"")
-                .append(channel.getRemoteAddress()).append("\",\"login\":\"")
-                .append(channel.getLocalAddress()).append("\",\"id\":0}}");
-
+                .append(counter[0]).append("\",\"login\":\"")
+                .append(counter[0]).append("\",\"id\":0}}");
 
         channel.write(ByteBuffer.wrap(builder.toString().getBytes()));
     }
 
     private static SocketChannel authorization(Map<SocketChannel, User> socketUserMap, SocketChannel activeChannel) {
-        User user = socketUserMap.get(activeChannel);
-        try {
-            String auth = JsonObjectFactory.getJsonString("getUserByLoginPassword", user);
-            activeChannel.write(ByteBuffer.wrap(auth.getBytes()));
-            User userExpected = getUserFromDatabase(activeChannel);
-            if (userExpected != null && user != null && user.equals(userExpected)) {
-                return activeChannel;
+        if (activeChannel != null) {
+            User user = socketUserMap.get(activeChannel);
+            try {
+                String auth = JsonObjectFactory.getJsonString("getUserByLoginPassword", user);
+                activeChannel.write(ByteBuffer.wrap(auth.getBytes()));
+                User userExpected = getUserFromDatabase(activeChannel);
+                if (userExpected != null && user != null && user.equals(userExpected)) {
+                    return activeChannel;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-        } catch (Exception e) {
-            e.printStackTrace();
         }
         return null;
     }
@@ -89,6 +95,8 @@ public class HardTimes {
                         socketChannel.getLocalAddress().toString(), "kek");
                 String jsonString = JsonObjectFactory.getJsonString(message);
                 socketChannel.write(ByteBuffer.wrap(jsonString.getBytes()));
+                socketUserMap.remove(socketChannel);
+                socketChannel.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
